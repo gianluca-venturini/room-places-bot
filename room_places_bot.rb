@@ -139,7 +139,7 @@ nutella.net.subscribe("location/group/resource/add", lambda do |message|
 									end)
 
 # Update the location of the resources
-nutella.net.subscribe("location/update", lambda do |message|
+nutella.net.subscribe("location/resource/update", lambda do |message|
 										puts message;
 										rid = message["rid"]
 										proximity = message["proximity"]
@@ -194,12 +194,17 @@ nutella.net.subscribe("location/update", lambda do |message|
 											end
 
 											# Send update
+											resources.transaction { 
+												resource = resources[rid];
+												publishResourceUpdate(resource)
+											}
+
+											# Send update to groups
 											groups.transaction {
 												for group in groups.roots()
 													puts group
 													if(groups[group]["resources"].include?(rid))
-														puts "Included"
-														nutella.net.publish( "location/moved/"+group+"/"+rid, resource)
+														# Update groups
 													end
 												end
 											}
@@ -255,6 +260,12 @@ end
 def publishResourceRemove(resource)
 	puts resource
 	nutella.net.publish("location/resources/removed", {"resources" => [resource]});
+end
+
+# Publish an updated resource
+def publishResourceUpdate(resource)
+	puts resource
+	nutella.net.publish("location/resources/updated", {"resources" => [resource]});
 end
 
 # Request the estimote iBeacons data
