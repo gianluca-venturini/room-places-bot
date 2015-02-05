@@ -32,7 +32,8 @@ nutella.net.subscribe("location/resource/add", lambda do |message|
 												if(resources[rid] == nil)
 													resources[rid]={"rid" => rid,
 															"type" => type,
-															"model" => model
+															"model" => model,
+															"parameters" => {}
 														};
 													publishResourceAdd(resources[rid]);
 													puts("Added resource")
@@ -145,6 +146,7 @@ nutella.net.subscribe("location/resource/update", lambda do |message|
 										proximity = message["proximity"]
 										discrete = message["discrete"]
 										continuous = message["continuous"]
+										parameters = message["parameters"]
 										resource = nil
 										if(proximity != nil || discrete != nil || continuous != nil)
 											resources.transaction { 
@@ -173,6 +175,25 @@ nutella.net.subscribe("location/resource/update", lambda do |message|
 											}
 										end
 
+										if(parameters != nil)
+											puts parameters
+											resources.transaction { 
+												resource = resources[rid];
+												ps = resource["parameters"]
+												for parameter in parameters
+													puts parameter
+													if(parameter["delete"] == true)
+														ps.delete(parameter["key"])
+													else
+														ps[parameter["key"]] = parameter["value"]
+													end
+												end
+												resource["parameters"] = ps
+												resources[rid] = resource
+												puts "Stored resource"
+											}
+										end
+
 										if(resource != nil)
 											if(resource["proximity"] != nil)
 												puts "Proximity resource detected: take coordinates base station"
@@ -197,6 +218,7 @@ nutella.net.subscribe("location/resource/update", lambda do |message|
 											resources.transaction { 
 												resource = resources[rid];
 												publishResourceUpdate(resource)
+												puts "Sent update"
 											}
 
 											# Send update to groups
