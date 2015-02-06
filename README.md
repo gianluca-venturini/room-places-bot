@@ -32,12 +32,16 @@ In order to interact with this bot you can use the library Nutella client librar
 
 \<resource\> ::= {rid: '', model: '\<model\>', type: '\<type\>'}
 
-\<resource_update\> ::= {rid: '', (\<continuous\>|\<discrete\>|\<proximity\>)}
+\<resource_update\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\> | \<parameters\>)}
 
 \<continuous\> ::= continuous: {x: '',  y: '', z: ''}
 
 \<discrete\> ::= discrete: {x: '',  y: '', z: ''}
 
 \<proximity\> ::= proximity: {\<resource_update\>}
+
+\<parameters\> ::= parameters: [\<parameter>*]
+
+\<parameter\> ::= {key: '' , (value: '' | delete: true)}
 
 \<resource_estimote\> ::= {name: ''}
