@@ -16,7 +16,7 @@ In order to interact with this bot you can use the library Nutella client librar
 | /location/group/resource/remove | Remove resource to a group | client -> server  | {rid: '', group: ''}                |
 | /location/resource/added        | Publish added resources    | server -> client  | {resources: [\<resource\>*]}        |
 | /location/resource/removed      | Publish removed resources  | server -> client  | {resources: [\<resource\>*]}        |
-| /location/resource/updated      | Update a resource          | client -> server  | {resources: [\<resource_update\>*]} |
+| /location/resource/updated      | Update a resource          | client -> server  | {resources: [\<resource_updated\>*]} |
 
 \<type\> ::= STATIC | DYNAMIC 
 
@@ -34,6 +34,8 @@ In order to interact with this bot you can use the library Nutella client librar
 
 \<resource_update\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\> | \<parameters\>)}
 
+\<resource_updated\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\> | \<parameters_updated\>)}
+
 \<continuous\> ::= continuous: {x: '',  y: '', z: ''}
 
 \<discrete\> ::= discrete: {x: '',  y: '', z: ''}
@@ -42,6 +44,9 @@ In order to interact with this bot you can use the library Nutella client librar
 
 \<parameters\> ::= parameters: [\<parameter>*]
 
+\<parameters_updated\> ::= parameters: {(\<key\>: '')*}
+
 \<parameter\> ::= {key: '' , (value: '' | delete: true)}
+
 
 \<resource_estimote\> ::= {name: ''}
