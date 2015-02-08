@@ -7,15 +7,15 @@ In order to interact with this bot you can use the library Nutella client librar
 
 | Channel                         | Function                   | Direction         | Content                         |
 | ------------------------------- | -------------------------- | ----------------- | ------------------------------- |
-| /location/resource/add          | Add a new resource         | client -> server  | {rid: '', model: '\<model\>', type: '\<type\>'}  |
-| /location/resource/remove       | Remove a resource          | client -> server  | {rid: ''}                           |
-| /location/resource/update       | Update a resource          | client -> server  | \<resource_update\>                 |
-| /location/group/add             | Add a group                | client -> server  | {group: ''}                         |
-| /location/group/remove          | Remove a group             | client -> server  | {group: ''}                         |
-| /location/group/resource/add    | Add resource to a group    | client -> server  | {rid: '', group: ''}                |
-| /location/group/resource/remove | Remove resource to a group | client -> server  | {rid: '', group: ''}                |
-| /location/resource/added        | Publish added resources    | server -> client  | {resources: [\<resource\>*]}        |
-| /location/resource/removed      | Publish removed resources  | server -> client  | {resources: [\<resource\>*]}        |
+| /location/resource/add          | Add a new resource         | client -> server  | {rid: '', model: '\<model\>', type: '\<type\>'[, proximity_range: \<number\>]}  |
+| /location/resource/remove       | Remove a resource          | client -> server  | {rid: ''}                            |
+| /location/resource/update       | Update a resource          | client -> server  | \<resource_update\>                  |
+| /location/group/add             | Add a group                | client -> server  | {group: ''}                          |
+| /location/group/remove          | Remove a group             | client -> server  | {group: ''}                          |
+| /location/group/resource/add    | Add resource to a group    | client -> server  | {rid: '', group: ''}                 |
+| /location/group/resource/remove | Remove resource to a group | client -> server  | {rid: '', group: ''}                 |
+| /location/resource/added        | Publish added resources    | server -> client  | {resources: [\<resource\>*]}         |
+| /location/resource/removed      | Publish removed resources  | server -> client  | {resources: [\<resource\>*]}         |
 | /location/resource/updated      | Update a resource          | client -> server  | {resources: [\<resource_updated\>*]} |
 
 \<type\> ::= STATIC | DYNAMIC 
@@ -34,7 +34,7 @@ In order to interact with this bot you can use the library Nutella client librar
 
 \<resource_update\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\> | \<parameters\>)}
 
-\<resource_updated\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\> | \<parameters_updated\>)}
+\<resource_updated\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\>), \<parameters_updated\> [, proximity_range: \<number\>]}
 
 \<continuous\> ::= continuous: {x: '',  y: '', z: ''}
 

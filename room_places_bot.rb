@@ -27,14 +27,29 @@ nutella.net.subscribe("location/resource/add", lambda do |message|
 										rid = message["rid"]
 										type = message["type"]
 										model = message["model"]
+										proximity_range = message["proximity_range"]
+
+										if(proximity_range == nil)
+											proximity_range = 0
+										end
+
 										if(rid != nil && type != nil && model != nil)
 											resources.transaction {
 												if(resources[rid] == nil)
-													resources[rid]={"rid" => rid,
-															"type" => type,
-															"model" => model,
-															"parameters" => {}
-														};
+													if(type == "STATIC")
+														resources[rid]={"rid" => rid,
+																"type" => type,
+																"model" => model,
+																"proximity_range" => proximity_range,
+																"parameters" => {}
+															};
+													elsif(type == "DYNAMIC")
+														resources[rid]={"rid" => rid,
+																"type" => type,
+																"model" => model,
+																"parameters" => {}
+															};
+													end
 													publishResourceAdd(resources[rid]);
 													puts("Added resource")
 												end
