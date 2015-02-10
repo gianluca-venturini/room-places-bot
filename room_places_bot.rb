@@ -20,6 +20,7 @@ puts "Room places initialization"
 # Open the resources database
 resources = nutella.persist.getJsonStore("db/resources.json")
 groups = nutella.persist.getJsonStore("db/groups.json")
+room = nutella.persist.getJsonStore("db/room.json")
 
 # Create new resource
 nutella.net.subscribe("location/resource/add", lambda do |message|
@@ -209,6 +210,19 @@ nutella.net.subscribe("location/resource/update", lambda do |message|
 											}
 										end
 
+										if(proximity == nil && discrete == nil && continuous == nil && parameters == nil)
+											resources.transaction { 
+												resource = resources[rid];
+
+												resource.delete("proximity");
+												resource.delete("continuous");
+												resource.delete("discrete");
+
+												resources[rid]=resource; 
+												puts "Stored resource"
+											}
+										end
+
 										if(resource != nil)
 											if(resource["proximity"] != nil)
 												puts "Proximity resource detected: take coordinates base station"
@@ -287,6 +301,32 @@ nutella.net.handle_requests("location/resources") do |request|
 	end	
 end
 
+# Update the room size
+nutella.net.subscribe("location/room/update", lambda do |message|
+												puts message;
+												x = message["x"]
+												y = message["y"]
+												z = message["z"]
+
+												if(x != nil && y != nil)
+													r = {}
+													room.transaction {
+														room["x"] = x
+														r["x"] = x
+
+														room["y"] = y
+														r["y"] = y
+
+														if(z != nil)
+															room["z"] = z
+															r["z"] = z
+														end
+													}
+													publishRoomUpdate(r)
+													puts "Room updated"
+												end
+											end)
+
 # Publish an added resource
 def publishResourceAdd(resource)
 	puts resource
@@ -303,6 +343,12 @@ end
 def publishResourceUpdate(resource)
 	puts resource
 	nutella.net.publish("location/resources/updated", {"resources" => [resource]});
+end
+
+# Publish an updated room
+def publishRoomUpdate(r)
+	puts r
+	nutella.net.publish("location/room/updated", r);
 end
 
 # Request the estimote iBeacons data
@@ -327,6 +373,28 @@ nutella.net.handle_requests("location/estimote") do |request|
 	response = https.start {|http| http.request(request) }
 	beacons = JSON.parse(response.body)
 	{"resources" => beacons}
+end
+
+# Request the size of the room
+nutella.net.handle_requests("location/room") do |request|
+	puts "Send the room dimension"
+
+	r = {};
+
+	room.transaction {
+		if(room["x"] == nil || room["y"] == nil)
+			r["x"] = 10
+			r["y"] = 7
+		else
+			r["x"] = room["x"]
+			r["y"] = room["y"]
+		end
+
+		if(room["z"] != nil)
+			r["z"] = room["z"]
+		end
+	}
+	r
 end
 
 puts "Initialization completed"
