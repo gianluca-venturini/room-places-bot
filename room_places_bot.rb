@@ -13,7 +13,7 @@ $estimote_pass = "aaa1c1e666642c3643ee74dda4145093"
 
 
 # Initialize nutella
-nutella.init ARGV
+nutella.init("crepe", "localhost", "room-places-bot")
 
 puts "Room places initialization"
 
@@ -23,7 +23,7 @@ groups = nutella.persist.getJsonStore("db/groups.json")
 room = nutella.persist.getJsonStore("db/room.json")
 
 # Create new resource
-nutella.net.subscribe("location/resource/add", lambda do |message|
+nutella.net.subscribe("location/resource/add", lambda do |message, component_id, resource_id|
 										puts message;
 										rid = message["rid"]
 										type = message["type"]
@@ -73,7 +73,7 @@ nutella.net.subscribe("location/resource/add", lambda do |message|
 									end)
 
 # Remove resource
-nutella.net.subscribe("location/resource/remove", lambda do |message|
+nutella.net.subscribe("location/resource/remove", lambda do |message, component_id, resource_id|
 										puts message;
 										rid = message["rid"]
 										if(rid != nil)
@@ -97,7 +97,7 @@ nutella.net.subscribe("location/resource/remove", lambda do |message|
 									end)
 
 # Create new group
-nutella.net.subscribe("location/group/add", lambda do |message|
+nutella.net.subscribe("location/group/add", lambda do |message, component_id, resource_id|
 										puts message;
 										group = message["group"]
 										if(group != nil)
@@ -112,7 +112,7 @@ nutella.net.subscribe("location/group/add", lambda do |message|
 									end)
 
 # Remove group
-nutella.net.subscribe("location/group/remove", lambda do |message|
+nutella.net.subscribe("location/group/remove", lambda do |message, component_id, resource_id|
 										puts message;
 										group = message["group"]
 										if(rid != nil)
@@ -127,7 +127,7 @@ nutella.net.subscribe("location/group/remove", lambda do |message|
 									end)
 
 # Add resource to group
-nutella.net.subscribe("location/group/resource/add", lambda do |message|
+nutella.net.subscribe("location/group/resource/add", lambda do |message, component_id, resource_id|
 										puts message;
 										rid = message["rid"]
 										group = message["group"]
@@ -156,13 +156,14 @@ nutella.net.subscribe("location/group/resource/add", lambda do |message|
 									end)
 
 # Update the location of the resources
-nutella.net.subscribe("location/resource/update", lambda do |message|
+nutella.net.subscribe("location/resource/update", lambda do |message, component_id, resource_id|
 										puts message;
 										rid = message["rid"]
 										proximity = message["proximity"]
 										discrete = message["discrete"]
 										continuous = message["continuous"]
 										parameters = message["parameters"]
+										proximity_range = message["proximity_range"]
 										resource = nil
 										if(proximity != nil || discrete != nil || continuous != nil)
 											resources.transaction { 
@@ -206,6 +207,20 @@ nutella.net.subscribe("location/resource/update", lambda do |message|
 												end
 												resource["parameters"] = ps
 												resources[rid] = resource
+												puts "Stored resource"
+											}
+										end
+
+										if(proximity_range != nil)
+											puts "Update proximity range"
+											resources.transaction { 
+												resource = resources[rid];
+
+												if(resource["type"] == "STATIC")
+													resource["proximity_range"]	= proximity_range
+												end
+
+												resources[rid]=resource; 
 												puts "Stored resource"
 											}
 										end
@@ -264,7 +279,7 @@ nutella.net.subscribe("location/resource/update", lambda do |message|
 									end)
 
 # Request the position of a single resource
-nutella.net.handle_requests("location/resources") do |request|
+nutella.net.handle_requests("location/resources", lambda do |request, component_id, resource_id|
 	rid = request["rid"]
 	group = request["group"]
 	reply = nil
@@ -299,10 +314,10 @@ nutella.net.handle_requests("location/resources") do |request|
 		}
 		{"resources" => resourceList}
 	end	
-end
+end)
 
 # Update the room size
-nutella.net.subscribe("location/room/update", lambda do |message|
+nutella.net.subscribe("location/room/update", lambda do |message, component_id, resource_id|
 												puts message;
 												x = message["x"]
 												y = message["y"]
@@ -352,7 +367,7 @@ def publishRoomUpdate(r)
 end
 
 # Request the estimote iBeacons data
-nutella.net.handle_requests("location/estimote") do |request|
+nutella.net.handle_requests("location/estimote", lambda do |request, component_id, resource_id|
 	puts "Download estimote iBeacon list"
 
 	uri = URI.parse($estimote_url)
@@ -373,10 +388,10 @@ nutella.net.handle_requests("location/estimote") do |request|
 	response = https.start {|http| http.request(request) }
 	beacons = JSON.parse(response.body)
 	{"resources" => beacons}
-end
+end)
 
 # Request the size of the room
-nutella.net.handle_requests("location/room") do |request|
+nutella.net.handle_requests("location/room", lambda do |request, component_id, resource_id|
 	puts "Send the room dimension"
 
 	r = {};
@@ -395,7 +410,7 @@ nutella.net.handle_requests("location/room") do |request|
 		end
 	}
 	r
-end
+end)
 
 puts "Initialization completed"
 
