@@ -159,38 +159,39 @@ nutella.net.subscribe("location/group/resource/add", lambda do |message, compone
 nutella.net.subscribe("location/resource/update", lambda do |message, component_id, resource_id|
 										puts message;
 										rid = message["rid"]
+										type = message["type"]
 										proximity = message["proximity"]
 										discrete = message["discrete"]
 										continuous = message["continuous"]
 										parameters = message["parameters"]
 										proximity_range = message["proximity_range"]
 										resource = nil
-										if(proximity != nil || discrete != nil || continuous != nil)
-											resources.transaction { 
-												resource = resources[rid];
+										#if(proximity != nil || discrete != nil || continuous != nil)
+										resources.transaction { 
+											resource = resources[rid];
 
-												if(proximity != nil)
-													resource["proximity"] = proximity;
-												else
-													resource.delete("proximity");
-												end
+											if(proximity != nil)
+												resource["proximity"] = proximity;
+											else
+												resource.delete("proximity");
+											end
 
-												if(continuous != nil)
-													resource["continuous"] = continuous;
-												else
-													resource.delete("continuous");
-												end
+											if(continuous != nil)
+												resource["continuous"] = continuous;
+											else
+												resource.delete("continuous");
+											end
 
-												if(discrete != nil)
-													resource["discrete"] = discrete;
-												else
-													resource.delete("discrete");
-												end
+											if(discrete != nil)
+												resource["discrete"] = discrete;
+											else
+												resource.delete("discrete");
+											end
 
-												resources[rid]=resource; 
-												puts "Stored resource"
-											}
-										end
+											resources[rid]=resource; 
+											puts "Stored resource"
+										}
+										#end
 
 										if(parameters != nil)
 											puts parameters
@@ -207,6 +208,29 @@ nutella.net.subscribe("location/resource/update", lambda do |message, component_
 												end
 												resource["parameters"] = ps
 												resources[rid] = resource
+												puts "Stored resource"
+											}
+										end
+
+										if(type != nil)
+											puts "Update type"
+											resources.transaction { 
+												resource = resources[rid];
+
+												if(type == "STATIC")
+													resource["type"] = type;
+													resource.delete("proximity");
+													if(proximity_range == nil)
+														resource["proximity_range"] = 1;
+													end
+												end
+
+												if(type == "DYNAMIC")
+													resource["type"] = type;
+													resource.delete("proximity_range");
+												end
+
+												resources[rid]=resource; 
 												puts "Stored resource"
 											}
 										end
