@@ -166,6 +166,24 @@ nutella.net.subscribe("location/resource/update", lambda do |message, component_
 										parameters = message["parameters"]
 										proximity_range = message["proximity_range"]
 										resource = nil
+
+										# Retrieve room data
+										r = {};
+
+										room.transaction {
+											if(room["x"] == nil || room["y"] == nil)
+												r["x"] = 10
+												r["y"] = 7
+											else
+												r["x"] = room["x"]
+												r["y"] = room["y"]
+											end
+
+											if(room["z"] != nil)
+												r["z"] = room["z"]
+											end
+										}
+
 										#if(proximity != nil || discrete != nil || continuous != nil)
 										resources.transaction { 
 											resource = resources[rid];
@@ -177,12 +195,38 @@ nutella.net.subscribe("location/resource/update", lambda do |message, component_
 											end
 
 											if(continuous != nil)
+												if(continuous["x"] > r["x"]) 
+													continuous["x"] = r["x"] 
+												end
+												if(continuous["x"] < 0)
+													continuous["x"] = 0      
+												end
+												if(continuous["y"] > r["y"])
+													continuous["y"] = r["y"] 
+												end
+												if(continuous["y"] < 0) 
+													continuous["y"] = 0      
+												end
+
 												resource["continuous"] = continuous;
 											else
 												resource.delete("continuous");
 											end
 
 											if(discrete != nil)
+												if(discrete["x"] > r["x"]) 
+													discrete["x"] = r["x"] 
+												end
+												if(discrete["x"] < 0) 
+													discrete["x"] = 0      
+												end
+												if(discrete["y"] > r["y"]) 
+													discrete["y"] = r["y"] 
+												end
+												if(discrete["y"] < 0) 
+													discrete["y"] = 0      
+												end
+
 												resource["discrete"] = discrete;
 											else
 												resource.delete("discrete");
@@ -263,31 +307,46 @@ nutella.net.subscribe("location/resource/update", lambda do |message, component_
 										end
 
 										if(resource != nil)
+											# Join data with base station data
 											if(resource["proximity"] != nil)
 												puts "Proximity resource detected: take coordinates base station"
 												resources.transaction { 
-													if(resources[resource["proximity"]["rid"]]["continous"] != nil)
-														puts "Copy contiuos position base station"
-														resource["proximity"]["continous"] = resources[resource["proximity"]["rid"]]["continous"]
-													else
-														puts "Continous position not present"
-													end
+													resource = resources[rid];
+													if(resource["proximity"]["rid"] != nil)
+														puts "Search for base station " + resource["proximity"]["rid"];
+														puts resources[resource["proximity"]["rid"]];
+														if(resources[resource["proximity"]["rid"]]["continuous"] != nil)
+															puts "Copy contiuos position base station"
+															resource["proximity"]["continuous"] = resources[resource["proximity"]["rid"]]["continuous"]
+														else
+															puts "Continous position not present"
+														end
 
-													if(resources[resource["proximity"]["rid"]]["discrete"] != nil)
-														puts "Copy discrete position base station"
-														resource["proximity"]["discrete"] = resources[resource["proximity"]["rid"]]["discrete"]
-													else
-														puts "Discrete position not present"
+														if(resources[resource["proximity"]["rid"]]["discrete"] != nil)
+															puts "Copy discrete position base station"
+															resource["proximity"]["discrete"] = resources[resource["proximity"]["rid"]]["discrete"]
+														else
+															puts "Discrete position not present"
+														end
 													end
 												}
 											end
 
+											if(resource["continuous"] != nil)
+												resources.transaction { 
+													for r in resources.roots()
+														resource2 = resources[r]
+														if(resource2["proximity"] != nil && resource2["proximity"]["rid"] == resource["rid"])
+															resource2["proximity"]["continuous"] = resource["continuous"];
+															publishResourceUpdate(resource2)
+														end
+													end														
+												}
+											end
+
 											# Send update
-											resources.transaction { 
-												resource = resources[rid];
-												publishResourceUpdate(resource)
-												puts "Sent update"
-											}
+											publishResourceUpdate(resource)
+											puts "Sent update"
 
 											# Send update to groups
 											groups.transaction {
