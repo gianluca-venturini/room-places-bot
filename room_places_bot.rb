@@ -190,6 +190,7 @@ nutella.net.subscribe("location/resource/update", lambda do |message, component_
 
 											if(proximity != nil)
 												resource["proximity"] = proximity;
+												resource["proximity"]["timestamp"] = Time.now.to_f
 											else
 												resource.delete("proximity");
 											end
@@ -494,6 +495,26 @@ nutella.net.handle_requests("location/room", lambda do |request, component_id, r
 	}
 	r
 end)
+
+# Routine that delete old proximity beacons
+Thread.new do
+  while true do
+    resources.transaction {
+    	for r in resources.roots()
+			resource = resources[r]
+			if(resource["proximity"] != nil && resource["proximity"]["timestamp"] != nil)
+				if(Time.now.to_f - resource["proximity"]["timestamp"] > 2.0 )
+					resource["proximity"] = {}
+					puts "Delete proximity resource"
+					publishResourceUpdate(resource)
+					# Call exit function
+				end
+			end
+		end
+    }
+    sleep 0.5
+  end
+end
 
 puts "Initialization completed"
 
