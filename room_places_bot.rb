@@ -11,9 +11,15 @@ $estimote_url = "https://cloud.estimote.com/v1/beacons";
 $estimote_user = "app_20ubacrvcr"
 $estimote_pass = "aaa1c1e666642c3643ee74dda4145093"
 
+# Parse command line arguments
+run_id, broker = nutella.parse_args ARGV
+
+# Extract the component_id
+component_id = nutella.extract_component_id
 
 # Initialize nutella
-nutella.init("crepe", "localhost", "room-places-bot")
+nutella.init( run_id, broker, component_id)
+
 
 puts "Room places initialization"
 
@@ -499,6 +505,7 @@ end)
 # Routine that delete old proximity beacons
 Thread.new do
   while true do
+  	puts ">>>"
     resources.transaction {
     	for r in resources.roots()
 			resource = resources[r]
@@ -512,7 +519,7 @@ Thread.new do
 			end
 		end
     }
-    sleep 0.5
+    sleep 0.1
   end
 end
 
