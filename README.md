@@ -37,7 +37,7 @@ In order to interact with this bot you can use the library Nutella client librar
 
 \<resource_update\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\> | \<parameters\>)}
 
-\<resource_updated\> ::= {rid: '', (\<continuous\> | \<discrete\> | \<proximity\>), \<parameters_updated\> [, proximity_range: \<float\>]}
+\<resource_updated\> ::= {rid: '', model: '\<model\>', type: '\<type\>', (\<continuous\> | \<discrete\> | \<proximity\>), \<parameters_updated\> [, proximity_range: \<float\>]}
 
 \<continuous\> ::= continuous: {x: \<float\>,  y: \<float\> [, z: \<float\>]}
 

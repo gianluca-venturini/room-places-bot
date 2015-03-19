@@ -185,20 +185,32 @@ nutella.net.subscribe('location/resource/update', lambda do |message, component_
 												r['y'] = $room['y']
 											end
 
-											if($room['z'] != nil)
+											if $room['z'] != nil
 												r['z'] = $room['z']
 											end
 										}
 
-										#if(proximity != nil || discrete != nil || continuous != nil)
 										$resources.transaction {
-											resource = $resources[rid];
+											resource = $resources[rid]
 
 											if proximity != nil && proximity['rid'] != nil && proximity['distance'] != nil
 												baseStation = $resources[proximity['rid']]
+
 												if baseStation['proximity_range'] >= proximity['distance']
-													resource['proximity'] = proximity
-													resource['proximity']['timestamp'] = Time.now.to_f
+                          if resource['proximity'] != nil && resource['proximity']['rid'] && resource['proximity']['distance']
+                            if resource['proximity']['rid'] != proximity['rid']
+                              if proximity['distance'] < resource['proximity']['distance']
+                                resource['proximity'] = proximity
+                                resource['proximity']['timestamp'] = Time.now.to_f
+                              end
+                            else
+                              resource['proximity'] = proximity
+                              resource['proximity']['timestamp'] = Time.now.to_f
+                            end
+                          else
+                            resource['proximity'] = proximity
+                            resource['proximity']['timestamp'] = Time.now.to_f
+                          end
 												end
 											elsif proximity == nil
 												resource.delete('proximity')
@@ -247,7 +259,6 @@ nutella.net.subscribe('location/resource/update', lambda do |message, component_
 											$resources[rid]=resource;
 											puts 'Stored resource'
 										}
-										#end
 
 										if parameters != nil
 											puts parameters
@@ -449,7 +460,7 @@ def computeResourceUpdate(rid)
     $groups.transaction {
       for group in $groups.roots()
         puts group
-        if($groups[group]['resources'].include?(rid))
+        if $groups[group]['resources'].include?(rid)
           # Update groups
         end
       end
@@ -464,19 +475,19 @@ end
 # Publish an added resource
 def publishResourceAdd(resource)
 	puts resource
-	nutella.net.publish('location/resources/added', {'resources' => [resource]});
+	nutella.net.publish('location/resources/added', {'resources' => [resource]})
 end
 
 # Publish a removed resource
 def publishResourceRemove(resource)
 	puts resource
-	nutella.net.publish('location/resources/removed', {'resources' => [resource]});
+	nutella.net.publish('location/resources/removed', {'resources' => [resource]})
 end
 
 # Publish an updated resource
 def publishResourceUpdate(resource)
 	puts resource
-	nutella.net.publish('location/resources/updated', {'resources' => [resource]});
+	nutella.net.publish('location/resources/updated', {'resources' => [resource]})
 end
 
 # Publish an updated room
