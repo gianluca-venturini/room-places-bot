@@ -45,7 +45,7 @@ In order to interact with this bot you can use the library Nutella client librar
 
 \<discrete_n\> ::= \<int\> | \<uppercase_char\>
 
-\<proximity\> ::= proximity: {rid: ''}
+\<proximity\> ::= proximity: {[rid: '', distance: '\<float\>']}
 
 \<parameters\> ::= parameters: [\<parameter>*]
 
