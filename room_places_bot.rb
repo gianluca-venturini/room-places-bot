@@ -44,17 +44,17 @@ nutella.net.subscribe('location/resource/add', lambda do |message, component_id,
 											$resources.transaction {
 												if $resources[rid] == nil
 													if type == 'STATIC'
-														$resources[rid]={'rid' => rid,
-																'type' => type,
-																'model' => model,
-																'proximity_range' => proximity_range,
-																'parameters' => {}
+														$resources[rid]={:rid => rid,
+																:type => type,
+																:model => model,
+																:proximity_range => proximity_range,
+																:parameters => {}
 															};
 													elsif type == 'DYNAMIC'
-														$resources[rid]={'rid' => rid,
-																'type' => type,
-																'model' => model,
-																'parameters' => {}
+														$resources[rid]={:rid => rid,
+																:type => type,
+																:model => model,
+																:parameters => {}
 															}
 													end
 													publishResourceAdd($resources[rid])
@@ -84,9 +84,9 @@ nutella.net.subscribe('location/resource/remove', lambda do |message, component_
 										rid = message['rid']
 										if rid != nil
 											$resources.transaction {
-												resourceCopy = $resources[rid];
-												$resources.delete(rid);
-												publishResourceRemove(resourceCopy);
+												resourceCopy = $resources[rid]
+												$resources.delete(rid)
+												publishResourceRemove(resourceCopy)
 												puts('Removed resource')
 											}
 											$groups.transaction {
@@ -110,7 +110,7 @@ nutella.net.subscribe('location/group/add', lambda do |message, component_id, re
 											$groups.transaction {
 												g=$groups[group]
 												if g == nil
-													$groups[group] = {'resources' => []}
+													$groups[group] = {:resources => []}
 												end
 												puts('Added group')
 											}
@@ -138,7 +138,7 @@ nutella.net.subscribe('location/group/resource/add', lambda do |message, compone
 										rid = message['rid']
 										group = message['group']
 										if rid != nil && group != nil
-											resource = nil;
+											resource = nil
 											$resources.transaction {
 												resource = $resources[rid];
 											}
@@ -174,7 +174,7 @@ nutella.net.subscribe('location/resource/update', lambda do |message, component_
 										resource = nil
 
 										# Retrieve $room data
-										r = {};
+										r = {}
 
 										$room.transaction {
 											if $room['x'] == nil || $room['y'] == nil
@@ -202,6 +202,8 @@ nutella.net.subscribe('location/resource/update', lambda do |message, component_
                               if proximity['distance'] < resource['proximity']['distance']
                                 resource['proximity'] = proximity
                                 resource['proximity']['timestamp'] = Time.now.to_f
+                                publishResourceExit(resource, baseStation['rid'])
+                                publishResourceEnter(resource, resource['proximity']['rid'])
                               end
                             else
                               resource['proximity'] = proximity
@@ -210,6 +212,7 @@ nutella.net.subscribe('location/resource/update', lambda do |message, component_
                           else
                             resource['proximity'] = proximity
                             resource['proximity']['timestamp'] = Time.now.to_f
+                            publishResourceEnter(resource, resource['proximity']['rid'])
                           end
 												end
 											elsif proximity == nil
@@ -358,7 +361,7 @@ nutella.net.handle_requests('location/resources', lambda do |request, component_
 				reply.push($resources[r]);
 			}
 		end
-		{'resources' => reply}
+		{:resources => reply}
 	else
 		resourceList = []
 
@@ -367,13 +370,13 @@ nutella.net.handle_requests('location/resources', lambda do |request, component_
 				resourceList.push($resources[resource])
 			end
 		}
-		{'resources' => resourceList}
+		{:resources => resourceList}
 	end
 end)
 
 # Update the room size
 nutella.net.subscribe('location/room/update', lambda do |message, component_id, resource_id|
-												puts message;
+												puts message
 												x = message['x']
 												y = message['y']
 												z = message['z']
@@ -424,7 +427,7 @@ def computeResourceUpdate(rid)
           # Update basic station
           computeResourceUpdate(resource['proximity']['rid'])
         else
-          puts 'Continous position not present'
+          puts 'Continuous position not present'
         end
 
         if baseStation != nil && baseStation['discrete'] != nil
@@ -475,25 +478,51 @@ end
 # Publish an added resource
 def publishResourceAdd(resource)
 	puts resource
-	nutella.net.publish('location/resources/added', {'resources' => [resource]})
+	nutella.net.publish('location/resources/added', {:resources => [resource]})
 end
 
 # Publish a removed resource
 def publishResourceRemove(resource)
 	puts resource
-	nutella.net.publish('location/resources/removed', {'resources' => [resource]})
+	nutella.net.publish('location/resources/removed', {:resources => [resource]})
 end
 
 # Publish an updated resource
 def publishResourceUpdate(resource)
 	puts resource
-	nutella.net.publish('location/resources/updated', {'resources' => [resource]})
+	nutella.net.publish('location/resources/updated', {:resources => [resource]})
 end
 
 # Publish an updated room
-def publishRoomUpdate(r)
-	puts r
-	nutella.net.publish('location/room/updated', r);
+def publishRoomUpdate(room)
+	puts room
+	nutella.net.publish('location/room/updated', room)
+end
+
+# Publish resources enter base station proximity area
+def publishResourcesEnter(resources, baseStationRid)
+  puts resources
+  puts baseStationRid
+  message = [:resources => resources]
+  nutella.net.publish("location/resource/static/#{baseStationRid}/enter", message)
+end
+
+# Publish resources exit base station proximity area
+def publishResourcesExit(resources, baseStationRid)
+  puts resources
+  puts baseStationRid
+  message = [:resources => resources]
+  nutella.net.publish("location/resource/static/#{baseStationRid}/exit", message)
+end
+
+# Publish resource enter base station proximity area
+def publishResourceEnter(rid, baseStationRid)
+  publishResourcesEnter([rid], baseStationRid)
+end
+
+# Publish resource enter base station proximity area
+def publishResourceExit(rid, baseStationRid)
+  publishResourcesExit([rid], baseStationRid)
 end
 
 # Request the estimote iBeacons data
@@ -507,7 +536,7 @@ nutella.net.handle_requests('location/estimote', lambda do |request, component_i
 	#https.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
 	headers = {
-		'Accept' => 'application/json'
+		:Accept => 'application/json'
 	}
 
 	request = Net::HTTP::Get.new(uri.path, headers)
@@ -517,7 +546,7 @@ nutella.net.handle_requests('location/estimote', lambda do |request, component_i
 	#response = https.request(request)
 	response = https.start {|http| http.request(request) }
 	beacons = JSON.parse(response.body)
-	{'resources' => beacons}
+	{:resources => beacons}
 end)
 
 # Request the size of the room
@@ -549,19 +578,19 @@ Thread.new do
 
     $resources.transaction {
     	for r in $resources.roots()
-			resource = $resources[r]
-			if resource['proximity'] != nil && resource['proximity']['timestamp'] != nil
-				if Time.now.to_f - resource['proximity']['timestamp'] > 3.0
-          if resource['proximity']['rid'] != nil
-            baseStations.push(resource['proximity']['rid'])
+        resource = $resources[r]
+        if resource['proximity'] != nil && resource['proximity']['timestamp'] != nil
+          if Time.now.to_f - resource['proximity']['timestamp'] > 3.0
+            if resource['proximity']['rid'] != nil
+              baseStations.push(resource['proximity']['rid'])
+              publishResourceExit(resource, resource['proximity']['rid'])
+            end
+            resource['proximity'] = {}
+            puts 'Delete proximity resource'
+            publishResourceUpdate(resource)
           end
-					resource['proximity'] = {}
-					puts 'Delete proximity resource'
-					publishResourceUpdate(resource)
-					# Call exit function
-				end
-			end
-		end
+        end
+      end
     }
 
 
