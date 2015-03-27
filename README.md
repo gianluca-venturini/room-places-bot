@@ -19,8 +19,8 @@ In order to interact with this bot you can use the library Nutella client librar
 | /location/resources/updated           | Update a resource          | client -> server  | {resources: [\<resource_updated\>*]}           |
 | /location/room/update                 | Update the room size       | client -> server  | {x: \<float\>, y: \<float\> [,z:\<float\>]}    |
 | /location/room/updated                | Notify a room update       | server -> client  | {x: \<float\>, y: \<float\> [,z:\<float\>]}    |
-| /location/resource/static/<rid>/enter | Notify resource enter area | server -> client  | {resources: ['\<resource\>'*]}                 |
-| /location/resource/static/<rid>/exit  | Notify resource exit area  | server -> client  | {resources: ['\<resource\>'*]}                 |
+| /location/resource/static/\<rid\>/enter | Notify resource enter area | server -> client  | {resources: ['\<resource\>'*]}                 |
+| /location/resource/static/\<rid\>/exit  | Notify resource exit area  | server -> client  | {resources: ['\<resource\>'*]}                 |
 
 \<type\> ::= STATIC | DYNAMIC 
 
