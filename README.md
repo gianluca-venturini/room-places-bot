@@ -28,12 +28,12 @@ In order to interact with this bot you can use the library Nutella client librar
 
 ## Request - Response channels
 
-| Channel                               | Function                   | Request -> Response | Request       | Response                                   |
-| ------------------------------------- | -------------------------- | ------------------- | ------------- | ------------------------------------------ |
-| /location/resources                   | Request all the resources  | client -> server    | {}            | {resources: [\<resource\>*]}               |
-| /location/estimote                    | Request all the iBeacons   | client -> server    | {}            | {resources: [\<resource_estimote\>*]}      |
-| /location/room                        | Request the room size      | client -> server    | {}            | {x: \<float\>, y: \<float\> [,z:\<float\>]}|
-| /location/resource/static/<rid>/inside| Notify resource enter area | server -> client    | {}            | {resources: ['\<resource\>'*]}             |
+| Channel                                | Function                   | Request -> Response | Request           | Response                                   |
+| -------------------------------------- | -------------------------- | ------------------- | ----------------- | ------------------------------------------ |
+| /location/resources                    | Request all the resources  | client -> server    | {}                | {resources: [\<resource\>*]}               |
+| /location/estimote                     | Request all the iBeacons   | client -> server    | {}                | {resources: [\<resource_estimote\>*]}      |
+| /location/room                         | Request the room size      | client -> server    | {}                | {x: \<float\>, y: \<float\> [,z:\<float\>]}|
+| /location/resource/static/<rid>/inside | Notify resource enter area | server -> client    | {}                | {resources: ['\<resource\>'*]}             |
 
 
 \<resource\> ::= {rid: '\<string\>', model: '\<model\>', type: '\<type\>'}

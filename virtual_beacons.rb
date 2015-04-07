@@ -7,7 +7,7 @@ require 'json'
 # Parse command line arguments
 run_id, broker = nutella.parse_args ARGV
 
-baseStationRid = 'iPad1'
+baseStationRid = 'iPad2'
 beaconRid = 'beacon1'
 
 # Extract the component_id
@@ -40,7 +40,7 @@ Thread.new do
     publishResourceUpdate("iPad1", "beacon1", 1.0);
     publishResourceUpdate("iPad1", "vb1", 1.0);
     publishResourceUpdate("iPad1", "vb2", 1.1);
-    publishResourceUpdate("iPad1", "vb3", 1.2);
+    publishResourceUpdate("iPad2", "vb3", 1.2);
     publishResourceUpdate("iPad1", "vb4", 1.3);
     publishResourceUpdate("iPad1", "vb5", 1.4);
     publishResourceUpdate("iPad1", "vb6", 1.5);
