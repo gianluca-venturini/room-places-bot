@@ -10,11 +10,12 @@ run_id, broker = nutella.parse_args ARGV
 baseStationRid = 'iPad2'
 beaconRid = 'beacon1'
 
+# Parse command line arguments
+broker, app_id, run_id = nutella.parse_args ARGV
 # Extract the component_id
 component_id = nutella.extract_component_id
-
 # Initialize nutella
-nutella.init( run_id, broker, component_id)
+nutella.init(broker, app_id, run_id, component_id)
 
 
 puts 'Virtual beacon initialization'
@@ -31,7 +32,6 @@ def publishResourceUpdate(baseStationRid, beaconRid, distance)
 	    	})
 	end
 end
-
 
 # Routine that delete old proximity beacons
 Thread.new do

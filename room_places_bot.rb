@@ -22,9 +22,9 @@ nutella.init(broker, app_id, run_id, component_id)
 puts 'Room places initialization'
 
 # Open the resources database
-$resources = nutella.persist.get_json_object_store('resources.json')
-$groups = nutella.persist.get_json_object_store('groups.json')
-$room = nutella.persist.get_json_object_store('room.json')
+$resources = nutella.persist.get_json_object_store('resources')
+$groups = nutella.persist.get_json_object_store('groups')
+$room = nutella.persist.get_json_object_store('room')
 
 # Create new resource
 nutella.net.subscribe('location/resource/add', lambda do |message, from|
@@ -321,6 +321,8 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
 
 # Request the position of a single resource
 nutella.net.handle_requests('location/resources', lambda do |request, from|
+  puts 'Send list of resources'
+
 	rid = request['rid']
 	group = request['group']
 	reply = nil
@@ -555,6 +557,7 @@ Thread.new do
             publishResourceExit(resource, resource['proximity']['rid'])
           end
           resource['proximity'] = {}
+          $resources[r] = resource
           puts 'Delete proximity resource'
           publishResourceUpdate(resource)
         end
