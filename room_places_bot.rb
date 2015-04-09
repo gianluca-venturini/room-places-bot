@@ -257,9 +257,12 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
                       ps = resource['parameters']
                       for parameter in parameters
                         puts parameter
-                        if parameter['delete']
+                        if parameter['delete'] != nil
                           ps.delete(parameter['key'])
                         else
+                          puts "--------"
+                          puts parameter['key']
+                          puts parameter['value']
                           ps[parameter['key']] = parameter['value']
                         end
                       end
