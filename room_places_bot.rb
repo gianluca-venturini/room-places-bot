@@ -188,6 +188,7 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
 
                         if baseStation['proximity_range'] >= proximity['distance']
                           if resource['proximity'] != nil && resource['proximity']['rid'] && resource['proximity']['distance']
+                            oldBaseStationRid = resource['proximity']['rid']
                             if resource['proximity']['rid'] != proximity['rid']
                               if proximity['distance'] < resource['proximity']['distance']
                                 resource['proximity'] = proximity
@@ -199,6 +200,8 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
                               resource['proximity'] = proximity
                               resource['proximity']['timestamp'] = Time.now.to_f
                             end
+                            $resources[rid]=resource
+                            computeResourceUpdate(oldBaseStationRid)
                           else
                             resource['proximity'] = proximity
                             resource['proximity']['timestamp'] = Time.now.to_f
@@ -422,21 +425,21 @@ def computeResourceUpdate(rid)
       end
     end
 
+    $resources[rid] = resource
+
     if resource['continuous'] != nil
       counter = 0 # Number of proximity beacons tracked from this station
-        for r in $resources.keys()
-          resource2 = $resources[r]
-          if resource2['proximity'] != nil && resource2['proximity']['rid'] == resource['rid']
-            counter += 1
-            resource2['proximity']['continuous'] = resource['continuous']
-            publishResourceUpdate(resource2)
-          end
+      for r in $resources.keys()
+        resource2 = $resources[r]
+        if resource2['proximity'] != nil && resource2['proximity']['rid'] == resource['rid']
+          counter += 1
+          resource2['proximity']['continuous'] = resource['continuous']
+          publishResourceUpdate(resource2)
         end
-        puts counter
-        resource['number_resources'] = counter
+      end
+      puts counter
+      resource['number_resources'] = counter
     end
-
-    $resources[rid] = resource
 
     # Send update
     publishResourceUpdate(resource)
