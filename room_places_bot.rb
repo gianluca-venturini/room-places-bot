@@ -229,9 +229,11 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
                         continuous['y'] = 0
                       end
 
-                      resource['continuous'] = continuous;
+                      resource['continuous'] = continuous
                     else
-                      resource.delete('continuous');
+                      if resource != nil && resource['continuous'] != nil
+                        resource.delete('continuous');
+                      end
                     end
 
                     if discrete != nil
@@ -248,9 +250,11 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
                         discrete['y'] = 0
                       end
 
-                      resource['discrete'] = discrete;
+                      resource['discrete'] = discrete
                     else
-                      resource.delete('discrete');
+                      if resource != nil && resource['discrete'] != nil
+                        resource.delete('discrete');
+                      end
                     end
 
                     $resources[rid]=resource
