@@ -182,6 +182,10 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
 
                     resource = $resources[rid]
 
+                    if resource == nil
+                      return
+                    end
+
                     if proximity != nil && proximity['rid'] != nil && proximity['distance'] != nil
                       baseStation = $resources[proximity['rid']]
 
