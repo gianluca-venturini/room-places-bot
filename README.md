@@ -21,8 +21,8 @@ In order to interact with this bot you can use the library Nutella client librar
 | /location/room/updated                  | Notify a room update         | server -> client  | {x: \<float\>, y: \<float\> [,z:\<float\>]}    |
 | /location/resource/static/\<rid\>/enter | Notify resource enter area   | server -> client  | {resources: ['\<resource\>'*]}                 |
 | /location/resource/static/\<rid\>/exit  | Notify resource exit area    | server -> client  | {resources: ['\<resource\>'*]}                 |
-| /location/tracking/discrete/update      | Update the discrete tracking | client -> server  | {tracking: \<discrete_tracking\>}              |
-| /location/tracking/discrete/updated     | Notify discrete update       | client -> server  | {tracking: \<discrete_tracking\>}              |
+| /location/tracking/discrete/update      | Update the discrete tracking | client -> server  | {tracking: \<discrete_tracking\>|{}}           |
+| /location/tracking/discrete/updated     | Notify discrete update       | client -> server  | {tracking: \<discrete_tracking\>|{}}           |
 
 \<type\> ::= STATIC | DYNAMIC 
 
@@ -36,7 +36,7 @@ In order to interact with this bot you can use the library Nutella client librar
 | /location/estimote                     | Request all the iBeacons      | client -> server    | {}                | {resources: [\<resource_estimote\>*]}      |
 | /location/room                         | Request the room size         | client -> server    | {}                | {x: \<float\>, y: \<float\> [,z:\<float\>]}|
 | /location/resource/static/<rid>/inside | Notify resource enter area    | client -> server    | {}                | {resources: ['\<resource\>'*]}             |
-| /location/tracking/discrete            | Request the discrete tracking | client -> server    | {}                | {tracking: \<discrete_tracking\>}          |
+| /location/tracking/discrete            | Request the discrete tracking | client -> server    | {}                | {tracking: \<discrete_tracking\>|{}}       |
 
 \<resource\> ::= {rid: '\<string\>', model: '\<model\>', type: '\<type\>'}
 

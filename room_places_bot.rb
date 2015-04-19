@@ -25,7 +25,7 @@ puts 'Room places initialization'
 $resources = nutella.persist.get_json_object_store('resources')
 $groups = nutella.persist.get_json_object_store('groups')
 $room = nutella.persist.get_json_object_store('room')
-$discrete_resource = nutella.persist.get_json_object_store('discrete_resource')
+$discrete_tracking = nutella.persist.get_json_object_store('discrete_tracking')
 
 # Create new resource
 nutella.net.subscribe('location/resource/add', lambda do |message, from|
@@ -241,24 +241,36 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
                       end
                     end
 
-                    if discrete != nil
-                      if discrete['x'] > r['x']
-                        discrete['x'] = r['x']
-                      end
-                      if discrete['x'] < 0
-                        discrete['x'] = 0
-                      end
-                      if discrete['y'] > r['y']
-                        discrete['y'] = r['y']
-                      end
-                      if discrete['y'] < 0
-                        discrete['y'] = 0
-                      end
+                    if $discrete_tracking['x'] != nil
+                      if discrete != nil
 
-                      resource['discrete'] = discrete
-                    else
-                      if resource != nil && resource['discrete'] != nil
-                        resource.delete('discrete');
+                        # Translate all coordinates in numbers
+                        if discrete['x'].instance_of? String
+                          discrete['x'] = discrete['x'].downcase.ord - 'a'.ord
+                        end
+                        if discrete['y'].instance_of? String
+                          discrete['y'] = discrete['y'].downcase.ord - 'a'.ord
+                        end
+
+
+                        if discrete['x'] > $discrete_tracking['n_x'] - 1
+                          discrete['x'] = $discrete_tracking['n_x'] - 1
+                        end
+                        if discrete['x'] < 0
+                          discrete['x'] = 0
+                        end
+                        if discrete['y'] > $discrete_tracking['n_y'] - 1
+                          discrete['y'] = $discrete_tracking['n_y'] - 1
+                        end
+                        if discrete['y'] < 0
+                          discrete['y'] = 0
+                        end
+
+                        resource['discrete'] = discrete
+                      else
+                        if resource != nil && resource['discrete'] != nil
+                          resource.delete('discrete');
+                        end
                       end
                     end
 
@@ -357,8 +369,12 @@ nutella.net.handle_requests('location/resources', lambda do |request, from|
     end
 
 		for r in rs
-      puts $resources[r]
-      reply.push($resources[r])
+      resource = $resources[resource]
+      # Translate discrete coordinate
+      if resource['discrete'] != nil
+        resource['discrete'] = translateDiscreteCoordinates(resource['discrete'])
+      end
+      reply.push(resource)
 
 		end
 		{:resources => reply}
@@ -366,7 +382,12 @@ nutella.net.handle_requests('location/resources', lambda do |request, from|
 		resourceList = []
 
     for resource in $resources.keys()
-      resourceList.push($resources[resource])
+      resource = $resources[resource]
+      # Translate discrete coordinate
+      if resource['discrete'] != nil
+        resource['discrete'] = translateDiscreteCoordinates(resource['discrete'])
+      end
+      resourceList.push(resource)
     end
 
 		{:resources => resourceList}
@@ -443,11 +464,17 @@ def computeResourceUpdate(rid)
         if resource2['proximity'] != nil && resource2['proximity']['rid'] == resource['rid']
           counter += 1
           resource2['proximity']['continuous'] = resource['continuous']
+          $resources[r] = resource2
           publishResourceUpdate(resource2)
         end
       end
       puts counter
       resource['number_resources'] = counter
+    end
+
+    # Translate discrete coordinate
+    if resource['discrete'] != nil
+      resource['discrete'] = translateDiscreteCoordinates(resource['discrete'])
     end
 
     # Send update
@@ -465,6 +492,18 @@ def computeResourceUpdate(rid)
   end
 end
 
+def translateDiscreteCoordinates(discrete)
+  if discrete != nil && $discrete_tracking['t_x'] != nil && $discrete_tracking['t_y'] != nil
+    if $discrete_tracking['t_x'] == 'LETTER'
+      discrete['x'] = (discrete['x'] + 'a'.ord).chr
+    end
+    if $discrete_tracking['t_y'] == 'LETTER'
+      discrete['y'] = (discrete['y'] + 'a'.ord).chr
+    end
+  end
+  discrete
+end
+
 # Update the room size
 nutella.net.subscribe('location/tracking/discrete/update', lambda do |message, from|
  tracking = message['tracking']
@@ -480,14 +519,23 @@ nutella.net.subscribe('location/tracking/discrete/update', lambda do |message, f
    t_y = tracking['t_y']
 
    if x != nil && y != nil && width != nil && height != nil && n_x != nil && n_y != nil && t_x != nil && t_y != nil
-     $discrete_resource['x'] = x
-     $discrete_resource['y'] = y
-     $discrete_resource['width'] = width
-     $discrete_resource['height'] = height
-     $discrete_resource['n_x'] = n_x
-     $discrete_resource['n_y'] = n_y
-     $discrete_resource['t_x'] = t_x
-     $discrete_resource['t_y'] = t_y
+     $discrete_tracking['x'] = x
+     $discrete_tracking['y'] = y
+     $discrete_tracking['width'] = width
+     $discrete_tracking['height'] = height
+     $discrete_tracking['n_x'] = n_x
+     $discrete_tracking['n_y'] = n_y
+     $discrete_tracking['t_x'] = t_x
+     $discrete_tracking['t_y'] = t_y
+   else
+     $discrete_tracking['x'] = nil
+     $discrete_tracking['y'] = nil
+     $discrete_tracking['width'] = nil
+     $discrete_tracking['height'] = nil
+     $discrete_tracking['n_x'] = nil
+     $discrete_tracking['n_y'] = nil
+     $discrete_tracking['t_x'] = nil
+     $discrete_tracking['t_y'] = nil
    end
 
    publishDiscreteUpdate()
@@ -549,14 +597,14 @@ end
 # Publish tracking system update
 def publishDiscreteUpdate()
 
-  x = $discrete_resource['x']
-  y = $discrete_resource['y']
-  width = $discrete_resource['width']
-  height = $discrete_resource['height']
-  n_x = $discrete_resource['n_x']
-  n_y = $discrete_resource['n_y']
-  t_x = $discrete_resource['t_x']
-  t_y = $discrete_resource['t_y']
+  x = $discrete_tracking['x']
+  y = $discrete_tracking['y']
+  width = $discrete_tracking['width']
+  height = $discrete_tracking['height']
+  n_x = $discrete_tracking['n_x']
+  n_y = $discrete_tracking['n_y']
+  t_x = $discrete_tracking['t_x']
+  t_y = $discrete_tracking['t_y']
 
   if x != nil && y != nil && width != nil && height != nil && n_x != nil && n_y != nil && t_x != nil && t_y != nil
     message = {
@@ -569,8 +617,20 @@ def publishDiscreteUpdate()
         :t_x => t_x,
         :t_y => t_y
     }
-    nutella.net.publish("location/tracking/discrete/updated", message)
+    nutella.net.publish('location/tracking/discrete/updated', {:tracking => message})
+
+    # Update all the discrete resources
+    for r in $resources.keys()
+      resource = $resources[r]
+      if resource['discrete'] != nil
+        computeResourceUpdate(r)
+      end
+    end
+
+  else
+    nutella.net.publish('location/tracking/discrete/updated', {:tracking => {}})
   end
+
 end
 
 # Request the estimote iBeacons data
@@ -622,37 +682,40 @@ end)
 nutella.net.handle_requests('location/tracking/discrete', lambda do |request, from|
   puts 'Send the discrete tracking system'
 
-  x = $discrete_resource['x']
-  y = $discrete_resource['y']
-  width = $discrete_resource['width']
-  height = $discrete_resource['height']
-  n_x = $discrete_resource['n_x']
-  n_y = $discrete_resource['n_y']
-  t_x = $discrete_resource['t_x']
-  t_y = $discrete_resource['t_y']
+  x = $discrete_tracking['x']
+  y = $discrete_tracking['y']
+  width = $discrete_tracking['width']
+  height = $discrete_tracking['height']
+  n_x = $discrete_tracking['n_x']
+  n_y = $discrete_tracking['n_y']
+  t_x = $discrete_tracking['t_x']
+  t_y = $discrete_tracking['t_y']
 
-  tracking = {
-      :x => x,
-      :y => y,
-      :width => width,
-      :height => height,
-      :n_x => n_x,
-      :n_y => n_y,
-      :t_x => t_x,
-      :t_y => t_y
-  }
-  {:tracking => tracking}
+  if x != nil && y != nil && width != nil && height != nil && n_x != nil && n_y != nil && t_x != nil && t_y != nil
+    tracking = {
+        :x => x,
+        :y => y,
+        :width => width,
+        :height => height,
+        :n_x => n_x,
+        :n_y => n_y,
+        :t_x => t_x,
+        :t_y => t_y
+    }
+    {:tracking => tracking}
+  else
+    {:tracking => {}}
+  end
 end)
 
 # Routine that delete old proximity beacons
+
 Thread.new do
   while true do
     baseStations = []
 
     for r in $resources.keys()
       resource = $resources[r]
-      puts resource
-      puts resource['proximity']
       if resource['proximity'] != nil && resource['proximity']['timestamp'] != nil
         if Time.now.to_f - resource['proximity']['timestamp'] > 3.0
           if resource['proximity']['rid'] != nil
