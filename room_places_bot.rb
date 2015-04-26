@@ -18,6 +18,78 @@ component_id = nutella.extract_component_id
 # Initialize nutella
 nutella.init(broker, app_id, run_id, component_id)
 
+# Buffer object that caches all the updates
+class RoomPlacesCachePublish
+
+  def initialize
+    @resource_updated = []
+    @resource_added = []
+    @resource_removed = []
+    @resource_entered = {}
+    @resource_exited = {}
+  end
+
+  def resources_update(resources)
+    puts resources
+    @resource_updated += resources
+  end
+
+  def resources_add(resources)
+    @resource_added += resources
+  end
+
+  def resources_remove(resources)
+    @resource_removed += resources
+  end
+
+  def resources_enter(resources, baseStationRid)
+    if @resource_entered[baseStationRid] == nil
+      @resource_entered[baseStationRid] = []
+    end
+    @resource_entered[baseStationRid] += resources
+  end
+
+  def resources_exit(resources, baseStationRid)
+    if @resource_exited[baseStationRid] == nil
+      @resource_exited[baseStationRid] = []
+    end
+    @resource_exited[baseStationRid] += resources
+  end
+
+  def publish_update
+    nutella.net.publish('location/resources/updated', {:resources => @resource_updated})
+    @resource_updated = []
+  end
+
+  def publish_add
+    nutella.net.publish('location/resources/added', {:resources => @resource_added})
+    @resource_added = []
+  end
+
+  def publish_remove
+    nutella.net.publish('location/resources/removed', {:resources => @resource_removed})
+    @resource_removed = []
+  end
+
+  def publish_enter
+    @resource_entered.each do |baseStationRid, resources|
+      nutella.net.publish("location/resource/static/#{baseStationRid}/enter", {'resources' => resources})
+    end
+
+    @resource_entered = {}
+  end
+
+  def publish_exit
+    @resource_exited.each do |baseStationRid, resources|
+      nutella.net.publish("location/resource/static/#{baseStationRid}/exit", {'resources' => resources})
+    end
+
+    @resource_exited = {}
+  end
+
+end
+
+$cache = RoomPlacesCachePublish.new
 
 puts 'Room places initialization'
 
@@ -56,21 +128,9 @@ nutella.net.subscribe('location/resource/add', lambda do |message, from|
                             }
                         end
                         publishResourceAdd($resources[rid])
+                        $cache.publish_add
                         puts('Added resource')
                       end
-
-                      default=$groups['default']
-                      if default == nil
-                        default = {}
-                      end
-                      if default['resources'] == nil
-                        default['resources'] = []
-                      end
-                      if !default['resources'].include?(rid)
-                        default['resources'].push(rid);
-                      end
-                      $groups['default'] = default
-                      puts('Added resource to group default')
 
 										end
 									end)
@@ -84,15 +144,8 @@ nutella.net.subscribe('location/resource/remove', lambda do |message, from|
                       resourceCopy = $resources[rid]
                       $resources.delete(rid)
                       publishResourceRemove(resourceCopy)
+                      $cache.publish_remove
                       puts('Removed resource')
-
-                      puts('P')
-                      for group in $groups.keys()
-                        puts('R')
-                        $groups[group]['resources'].delete(rid)
-                        puts('Removed')
-                      end
-                      puts('Removed resource in groups')
 
 										end
 									end)
@@ -347,6 +400,10 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
 
                     computeResourceUpdate(rid)
 
+                    $cache.publish_update
+                    $cache.publish_enter
+                    $cache.publish_exit
+
 									end)
 
 # Request the position of a single resource
@@ -481,14 +538,6 @@ def computeResourceUpdate(rid)
     publishResourceUpdate(resource)
     puts 'Sent update'
 
-    # Send update to groups
-      for group in $groups.keys()
-        puts group
-        if $groups[group]['resources'].include?(rid)
-          # Update groups
-        end
-      end
-
   end
 end
 
@@ -547,19 +596,22 @@ end)
 # Publish an added resource
 def publishResourceAdd(resource)
 	puts resource
-	nutella.net.publish('location/resources/added', {:resources => [resource]})
+  $cache.resources_add([resource])
+	#nutella.net.publish('location/resources/added', {:resources => [resource]})
 end
 
 # Publish a removed resource
 def publishResourceRemove(resource)
 	puts resource
-	nutella.net.publish('location/resources/removed', {:resources => [resource]})
+  $cache.resources_remove([resource])
+	#nutella.net.publish('location/resources/removed', {:resources => [resource]})
 end
 
 # Publish an updated resource
 def publishResourceUpdate(resource)
 	puts resource
-	nutella.net.publish('location/resources/updated', {:resources => [resource]})
+  $cache.resources_update([resource])
+	#nutella.net.publish('location/resources/updated', {:resources => [resource]})
 end
 
 # Publish an updated room
@@ -572,16 +624,18 @@ end
 def publishResourcesEnter(resources, baseStationRid)
   puts resources
   puts baseStationRid
-  message = {:resources => resources}
-  nutella.net.publish("location/resource/static/#{baseStationRid}/enter", message)
+  #message = {:resources => resources}
+  #nutella.net.publish("location/resource/static/#{baseStationRid}/enter", message)
+  $cache.resources_enter(resources, baseStationRid)
 end
 
 # Publish resources exit base station proximity area
 def publishResourcesExit(resources, baseStationRid)
   puts resources
   puts baseStationRid
-  message = {:resources => resources}
-  nutella.net.publish("location/resource/static/#{baseStationRid}/exit", message)
+  #message = {:resources => resources}
+  #nutella.net.publish("location/resource/static/#{baseStationRid}/exit", message)
+  $cache.resources_exit(resources, baseStationRid)
 end
 
 # Publish resource enter base station proximity area
@@ -734,6 +788,9 @@ Thread.new do
     for baseStation in baseStations
       computeResourceUpdate(baseStation)
     end
+
+    $cache.publish_update
+    $cache.publish_exit
 
     sleep 0.1
   end
