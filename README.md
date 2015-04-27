@@ -10,6 +10,7 @@ In order to interact with this bot you can use the library Nutella client librar
 | /location/resource/add                  | Add a new resource           | client -> server  | {rid: '\<string\>', model: '\<model\>', type: '\<type\>'[, proximity_range: \<float\>]}  |
 | /location/resource/remove               | Remove a resource            | client -> server  | {rid: '\<string\>'}                            |
 | /location/resource/update               | Update a resource            | client -> server  | \<resource_update\>                            |
+| /location/resources/update              | Update resources             | client -> server  | {resources: [\<resource_update\>*]}            |
 | /location/group/add                     | Add a group                  | client -> server  | {group: '\<string\>'}                          |
 | /location/group/remove                  | Remove a group               | client -> server  | {group: '\<string\>'}                          |
 | /location/group/resource/add            | Add resource to a group      | client -> server  | {rid: '\<string\>', group: '\<string\>'}       |

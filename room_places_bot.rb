@@ -22,69 +22,106 @@ nutella.init(broker, app_id, run_id, component_id)
 class RoomPlacesCachePublish
 
   def initialize
-    @resource_updated = []
+    @resource_updated = {}
     @resource_added = []
     @resource_removed = []
     @resource_entered = {}
     @resource_exited = {}
+
+    # Semaphores for threads safety
+    @s1 = Mutex.new
+    @s2 = Mutex.new
+    @s3 = Mutex.new
+    @s4 = Mutex.new
+    @s5 = Mutex.new
+    @s6 = Mutex.new
+    @s7 = Mutex.new
+    @s8 = Mutex.new
+    @s9 = Mutex.new
+    @s10 = Mutex.new
   end
 
   def resources_update(resources)
-    puts resources
-    @resource_updated += resources
+    #@s1.synchronize {
+      resources.each do |resource|
+        @resource_updated[resource['rid']] = resource
+      end
+    #}
   end
 
   def resources_add(resources)
-    @resource_added += resources
+    #@s2.synchronize {
+      @resource_added += resources
+    #}
   end
 
   def resources_remove(resources)
-    @resource_removed += resources
+    #@s3.synchronize {
+      @resource_removed += resources
+    #}
   end
 
   def resources_enter(resources, baseStationRid)
-    if @resource_entered[baseStationRid] == nil
-      @resource_entered[baseStationRid] = []
-    end
-    @resource_entered[baseStationRid] += resources
+    #@s4.synchronize {
+      if @resource_entered[baseStationRid] == nil
+        @resource_entered[baseStationRid] = []
+      end
+      @resource_entered[baseStationRid] += resources
+    #}
   end
 
   def resources_exit(resources, baseStationRid)
-    if @resource_exited[baseStationRid] == nil
-      @resource_exited[baseStationRid] = []
-    end
-    @resource_exited[baseStationRid] += resources
+    #@s5.synchronize {
+      if @resource_exited[baseStationRid] == nil
+        @resource_exited[baseStationRid] = []
+      end
+      @resource_exited[baseStationRid] += resources
+    #}
   end
 
   def publish_update
-    nutella.net.publish('location/resources/updated', {:resources => @resource_updated})
-    @resource_updated = []
+    #@s6.synchronize {
+      if @resource_updated.length > 0
+        nutella.net.publish('location/resources/updated', {:resources => @resource_updated.values})
+        @resource_updated = {}
+      end
+    #}
   end
 
   def publish_add
-    nutella.net.publish('location/resources/added', {:resources => @resource_added})
-    @resource_added = []
+    #@s7.synchronize {
+      if @resource_added.length > 0
+        nutella.net.publish('location/resources/added', {:resources => @resource_added})
+        @resource_added = []
+      end
+    #}
   end
 
   def publish_remove
-    nutella.net.publish('location/resources/removed', {:resources => @resource_removed})
-    @resource_removed = []
+    #@s8.synchronize {
+      if @resource_removed.length > 0
+        nutella.net.publish('location/resources/removed', {:resources => @resource_removed})
+        @resource_removed = []
+      end
+    #}
   end
 
   def publish_enter
-    @resource_entered.each do |baseStationRid, resources|
-      nutella.net.publish("location/resource/static/#{baseStationRid}/enter", {'resources' => resources})
-    end
-
-    @resource_entered = {}
+    #@s9.synchronize {
+      @resource_entered.each do |baseStationRid, resources|
+        nutella.net.publish("location/resource/static/#{baseStationRid}/enter", {'resources' => resources})
+      end
+      @resource_entered = {}
+    #}
   end
 
   def publish_exit
-    @resource_exited.each do |baseStationRid, resources|
-      nutella.net.publish("location/resource/static/#{baseStationRid}/exit", {'resources' => resources})
-    end
-
-    @resource_exited = {}
+    #@s10.synchronize {
+      @resource_exited.each do |baseStationRid, resources|
+        nutella.net.publish("location/resource/static/#{baseStationRid}/exit", {'resources' => resources})
+      end
+      @resource_exited = {}
+    #}
   end
 
 end
@@ -95,6 +132,7 @@ puts 'Room places initialization'
 
 # Open the resources database
 $resources = nutella.persist.get_json_object_store('resources')
+#$resources = nutella.persist.get_mongo_object_store('resources')
 $groups = nutella.persist.get_json_object_store('groups')
 $room = nutella.persist.get_json_object_store('room')
 $discrete_tracking = nutella.persist.get_json_object_store('discrete_tracking')
@@ -207,204 +245,207 @@ nutella.net.subscribe('location/group/resource/add', lambda do |message, from|
 
 # Update the location of the resources
 nutella.net.subscribe('location/resource/update', lambda do |message, from|
-										puts message
-										rid = message['rid']
-										type = message['type']
-										proximity = message['proximity']
-										discrete = message['discrete']
-										continuous = message['continuous']
-										parameters = message['parameters']
-										proximity_range = message['proximity_range']
-										resource = nil
+    updateResource(message)
 
-										# Retrieve $room data
-										r = {}
+    $cache.publish_update
+    $cache.publish_enter
+    $cache.publish_exit
+  end)
 
-                    if $room['x'] == nil || $room['y'] == nil
-                      r['x'] = 10
-                      r['y'] = 7
-                    else
-                      r['x'] = $room['x']
-                      r['y'] = $room['y']
-                    end
+# Update the location of the resources
+nutella.net.subscribe('location/resources/update', lambda do |message, from|
+    resources = message['resources']
+    if resources != nil
+      resources.each do |resource|
+        updateResource(resource)
+      end
+    end
 
-                    if $room['z'] != nil
-                      r['z'] = $room['z']
-                    end
+    $cache.publish_update
+    $cache.publish_enter
+    $cache.publish_exit
+  end)
 
+def updateResource(updatedResource)
+  rid = updatedResource['rid']
+  type = updatedResource['type']
+  proximity = updatedResource['proximity']
+  discrete = updatedResource['discrete']
+  continuous = updatedResource['continuous']
+  parameters = updatedResource['parameters']
+  proximity_range = updatedResource['proximity_range']
+  resource = nil
 
-                    resource = $resources[rid]
+  # Retrieve $room data
+  r = {}
 
-                    if resource == nil
-                      return
-                    end
+  if $room['x'] == nil || $room['y'] == nil
+    r['x'] = 10
+    r['y'] = 7
+  else
+    r['x'] = $room['x']
+    r['y'] = $room['y']
+  end
 
-                    if proximity != nil && proximity['rid'] != nil && proximity['distance'] != nil
-                      baseStation = $resources[proximity['rid']]
-
-                      if baseStation != nil
-
-                        if baseStation['proximity_range'] >= proximity['distance']
-                          if resource['proximity'] != nil && resource['proximity']['rid'] && resource['proximity']['distance']
-                            oldBaseStationRid = resource['proximity']['rid']
-                            if resource['proximity']['rid'] != proximity['rid']
-                              if proximity['distance'] < resource['proximity']['distance']
-                                resource['proximity'] = proximity
-                                resource['proximity']['timestamp'] = Time.now.to_f
-                                publishResourceExit(resource, baseStation['rid'])
-                                publishResourceEnter(resource, resource['proximity']['rid'])
-                              end
-                            else
-                              resource['proximity'] = proximity
-                              resource['proximity']['timestamp'] = Time.now.to_f
-                            end
-                            $resources[rid]=resource
-                            computeResourceUpdate(oldBaseStationRid)
-                          else
-                            resource['proximity'] = proximity
-                            resource['proximity']['timestamp'] = Time.now.to_f
-                            publishResourceEnter(resource, resource['proximity']['rid'])
-                          end
-                        end
-                      end
-                    elsif proximity == nil
-                      resource.delete('proximity')
-                    else
-                      resource['proximity'] = {}
-                    end
-
-                    if continuous != nil
-                      if continuous['x'] > r['x']
-                        continuous['x'] = r['x']
-                      end
-                      if continuous['x'] < 0
-                        continuous['x'] = 0
-                      end
-                      if continuous['y'] > r['y']
-                        continuous['y'] = r['y']
-                      end
-                      if continuous['y'] < 0
-                        continuous['y'] = 0
-                      end
-
-                      resource['continuous'] = continuous
-                    else
-                      if resource != nil && resource['continuous'] != nil
-                        resource.delete('continuous');
-                      end
-                    end
-
-                    if $discrete_tracking['x'] != nil
-                      if discrete != nil
-
-                        # Translate all coordinates in numbers
-                        if discrete['x'].instance_of? String
-                          discrete['x'] = discrete['x'].downcase.ord - 'a'.ord
-                        end
-                        if discrete['y'].instance_of? String
-                          discrete['y'] = discrete['y'].downcase.ord - 'a'.ord
-                        end
+  if $room['z'] != nil
+    r['z'] = $room['z']
+  end
 
 
-                        if discrete['x'] > $discrete_tracking['n_x'] - 1
-                          discrete['x'] = $discrete_tracking['n_x'] - 1
-                        end
-                        if discrete['x'] < 0
-                          discrete['x'] = 0
-                        end
-                        if discrete['y'] > $discrete_tracking['n_y'] - 1
-                          discrete['y'] = $discrete_tracking['n_y'] - 1
-                        end
-                        if discrete['y'] < 0
-                          discrete['y'] = 0
-                        end
+  resource = $resources[rid]
 
-                        resource['discrete'] = discrete
-                      else
-                        if resource != nil && resource['discrete'] != nil
-                          resource.delete('discrete');
-                        end
-                      end
-                    end
+  if resource == nil
+    return
+  end
 
-                    $resources[rid]=resource
-                    puts 'Stored resource'
+  if proximity != nil && proximity['rid'] != nil && proximity['distance'] != nil
+    baseStation = $resources[proximity['rid']]
+
+    if baseStation != nil
+
+      if baseStation['proximity_range'] >= proximity['distance']
+        if resource['proximity'] != nil && resource['proximity']['rid'] && resource['proximity']['distance']
+          oldBaseStationRid = resource['proximity']['rid']
+          if resource['proximity']['rid'] != proximity['rid']
+            if proximity['distance'] < resource['proximity']['distance']
+              resource['proximity'] = proximity
+              resource['proximity']['timestamp'] = Time.now.to_f
+              publishResourceExit(resource, baseStation['rid'])
+              publishResourceEnter(resource, resource['proximity']['rid'])
+            end
+          else
+            resource['proximity'] = proximity
+            resource['proximity']['timestamp'] = Time.now.to_f
+          end
+          computeResourceUpdate(oldBaseStationRid)
+        else
+          resource['proximity'] = proximity
+          resource['proximity']['timestamp'] = Time.now.to_f
+          publishResourceEnter(resource, resource['proximity']['rid'])
+        end
+      end
+    end
+  elsif proximity == nil
+    resource.delete('proximity')
+  else
+    resource['proximity'] = {}
+  end
+
+  if continuous != nil
+    if continuous['x'] > r['x']
+      continuous['x'] = r['x']
+    end
+    if continuous['x'] < 0
+      continuous['x'] = 0
+    end
+    if continuous['y'] > r['y']
+      continuous['y'] = r['y']
+    end
+    if continuous['y'] < 0
+      continuous['y'] = 0
+    end
+
+    resource['continuous'] = continuous
+  else
+    if resource != nil && resource['continuous'] != nil
+      resource.delete('continuous');
+    end
+  end
+
+  if $discrete_tracking['x'] != nil
+    if discrete != nil
+
+      # Translate all coordinates in numbers
+      if discrete['x'].instance_of? String
+        discrete['x'] = discrete['x'].downcase.ord - 'a'.ord
+      end
+      if discrete['y'].instance_of? String
+        discrete['y'] = discrete['y'].downcase.ord - 'a'.ord
+      end
 
 
-										if parameters != nil
-											puts parameters
-                      resource = $resources[rid]
-                      ps = resource['parameters']
-                      for parameter in parameters
-                        puts parameter
-                        if parameter['delete'] != nil
-                          ps.delete(parameter['key'])
-                        else
-                          puts "--------"
-                          puts parameter['key']
-                          puts parameter['value']
-                          ps[parameter['key']] = parameter['value']
-                        end
-                      end
-                      resource['parameters'] = ps
-                      $resources[rid] = resource
-                      puts 'Stored resource'
+      if discrete['x'] > $discrete_tracking['n_x'] - 1
+        discrete['x'] = $discrete_tracking['n_x'] - 1
+      end
+      if discrete['x'] < 0
+        discrete['x'] = 0
+      end
+      if discrete['y'] > $discrete_tracking['n_y'] - 1
+        discrete['y'] = $discrete_tracking['n_y'] - 1
+      end
+      if discrete['y'] < 0
+        discrete['y'] = 0
+      end
 
-										end
+      resource['discrete'] = discrete
+    else
+      if resource != nil && resource['discrete'] != nil
+        resource.delete('discrete');
+      end
+    end
+  end
 
-										if type != nil
-											puts 'Update type'
-                      resource = $resources[rid]
+  if parameters != nil
+    puts parameters
+    ps = resource['parameters']
+    for parameter in parameters
+      puts parameter
+      if parameter['delete'] != nil
+        ps.delete(parameter['key'])
+      else
+        puts "--------"
+        puts parameter['key']
+        puts parameter['value']
+        ps[parameter['key']] = parameter['value']
+      end
+    end
+    resource['parameters'] = ps
+  end
 
-                      if type == 'STATIC'
-                        resource['type'] = type
-                        resource.delete('proximity')
-                        if proximity_range == nil
-                          resource['proximity_range'] = 1;
-                        end
-                      end
+  if type != nil
+    puts 'Update type'
 
-                      if type == 'DYNAMIC'
-                        resource['type'] = type
-                        resource.delete('proximity_range')
-                      end
+    if type == 'STATIC'
+      resource['type'] = type
+      resource.delete('proximity')
+      if proximity_range == nil
+        resource['proximity_range'] = 1;
+      end
+    end
 
-                      $resources[rid]=resource
-                      puts 'Stored resource'
-										end
+    if type == 'DYNAMIC'
+      resource['type'] = type
+      resource.delete('proximity_range')
+    end
 
-										if proximity_range != nil
-											puts 'Update proximity range'
-                      resource = $resources[rid]
+    puts 'Stored resource'
+  end
 
-                      if resource['type'] == 'STATIC'
-                        resource['proximity_range']	= proximity_range
-                      end
+  if proximity_range != nil
+    puts 'Update proximity range'
 
-                      $resources[rid]=resource
-                      puts 'Stored resource'
+    if resource['type'] == 'STATIC'
+      resource['proximity_range']	= proximity_range
+    end
 
-										end
+    puts 'Stored resource'
 
-										if proximity == nil && discrete == nil && continuous == nil && parameters == nil
-                      resource = $resources[rid]
+  end
 
-                      resource.delete('proximity')
-                      resource.delete('continuous')
-                      resource.delete('discrete')
+  if proximity == nil && discrete == nil && continuous == nil && parameters == nil
 
-                      $resources[rid]=resource
-                      puts 'Stored resource'
+    resource.delete('proximity')
+    resource.delete('continuous')
+    resource.delete('discrete')
 
-                    end
+    puts 'Stored resource'
 
-                    computeResourceUpdate(rid)
+  end
 
-                    $cache.publish_update
-                    $cache.publish_enter
-                    $cache.publish_exit
+  $resources[rid]=resource
+  computeResourceUpdate(rid)
 
-									end)
+end
 
 # Request the position of a single resource
 nutella.net.handle_requests('location/resources', lambda do |request, from|
@@ -514,6 +555,7 @@ def computeResourceUpdate(rid)
 
     $resources[rid] = resource
 
+=begin
     if resource['continuous'] != nil
       counter = 0 # Number of proximity beacons tracked from this station
       for r in $resources.keys()
@@ -528,6 +570,7 @@ def computeResourceUpdate(rid)
       puts counter
       resource['number_resources'] = counter
     end
+=end
 
     # Translate discrete coordinate
     if resource['discrete'] != nil
@@ -792,7 +835,7 @@ Thread.new do
     $cache.publish_update
     $cache.publish_exit
 
-    sleep 0.1
+    sleep 2
   end
 end
 
