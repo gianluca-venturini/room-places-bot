@@ -42,86 +42,86 @@ class RoomPlacesCachePublish
   end
 
   def resources_update(resources)
-    #@s1.synchronize {
+    @s1.synchronize {
       resources.each do |resource|
         @resource_updated[resource['rid']] = resource
       end
-    #}
+    }
   end
 
   def resources_add(resources)
-    #@s2.synchronize {
+    @s2.synchronize {
       @resource_added += resources
-    #}
+    }
   end
 
   def resources_remove(resources)
-    #@s3.synchronize {
+    @s3.synchronize {
       @resource_removed += resources
-    #}
+    }
   end
 
   def resources_enter(resources, baseStationRid)
-    #@s4.synchronize {
+    @s4.synchronize {
       if @resource_entered[baseStationRid] == nil
         @resource_entered[baseStationRid] = []
       end
       @resource_entered[baseStationRid] += resources
-    #}
+    }
   end
 
   def resources_exit(resources, baseStationRid)
-    #@s5.synchronize {
+    @s5.synchronize {
       if @resource_exited[baseStationRid] == nil
         @resource_exited[baseStationRid] = []
       end
       @resource_exited[baseStationRid] += resources
-    #}
+    }
   end
 
   def publish_update
-    #@s6.synchronize {
+    @s6.synchronize {
       if @resource_updated.length > 0
         nutella.net.publish('location/resources/updated', {:resources => @resource_updated.values})
         @resource_updated = {}
       end
-    #}
+    }
   end
 
   def publish_add
-    #@s7.synchronize {
+    @s7.synchronize {
       if @resource_added.length > 0
         nutella.net.publish('location/resources/added', {:resources => @resource_added})
         @resource_added = []
       end
-    #}
+    }
   end
 
   def publish_remove
-    #@s8.synchronize {
+    @s8.synchronize {
       if @resource_removed.length > 0
         nutella.net.publish('location/resources/removed', {:resources => @resource_removed})
         @resource_removed = []
       end
-    #}
+    }
   end
 
   def publish_enter
-    #@s9.synchronize {
+    @s9.synchronize {
       @resource_entered.each do |baseStationRid, resources|
         nutella.net.publish("location/resource/static/#{baseStationRid}/enter", {'resources' => resources})
       end
       @resource_entered = {}
-    #}
+    }
   end
 
   def publish_exit
-    #@s10.synchronize {
+    @s10.synchronize {
       @resource_exited.each do |baseStationRid, resources|
         nutella.net.publish("location/resource/static/#{baseStationRid}/exit", {'resources' => resources})
       end
       @resource_exited = {}
-    #}
+    }
   end
 
 end
@@ -248,8 +248,8 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
     updateResource(message)
 
     $cache.publish_update
-    $cache.publish_exit
     $cache.publish_enter
+    $cache.publish_exit
   end)
 
 # Update the location of the resources
@@ -262,8 +262,8 @@ nutella.net.subscribe('location/resources/update', lambda do |message, from|
     end
 
     $cache.publish_update
-    $cache.publish_exit
     $cache.publish_enter
+    $cache.publish_exit
   end)
 
 def updateResource(updatedResource)
@@ -307,12 +307,12 @@ def updateResource(updatedResource)
         if resource['proximity'] != nil && resource['proximity']['rid'] && resource['proximity']['distance']
           oldBaseStationRid = resource['proximity']['rid']
           if resource['proximity']['rid'] != proximity['rid']
-            if proximity['distance'] < resource['proximity']['distance']
+            #if proximity['distance'] < resource['proximity']['distance']
               resource['proximity'] = proximity
               resource['proximity']['timestamp'] = Time.now.to_f
               publishResourceExit(resource, baseStation['rid'])
               publishResourceEnter(resource, resource['proximity']['rid'])
-            end
+            #end
           else
             resource['proximity'] = proximity
             resource['proximity']['timestamp'] = Time.now.to_f
@@ -833,6 +833,7 @@ Thread.new do
     end
 
     $cache.publish_update
+    $cache.publish_enter
     $cache.publish_exit
 
     sleep 2
