@@ -248,8 +248,8 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
     updateResource(message)
 
     $cache.publish_update
-    $cache.publish_enter
     $cache.publish_exit
+    $cache.publish_enter
   end)
 
 # Update the location of the resources
@@ -262,8 +262,8 @@ nutella.net.subscribe('location/resources/update', lambda do |message, from|
     end
 
     $cache.publish_update
-    $cache.publish_enter
     $cache.publish_exit
+    $cache.publish_enter
   end)
 
 def updateResource(updatedResource)
