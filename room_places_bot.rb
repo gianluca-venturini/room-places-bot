@@ -139,7 +139,6 @@ $discrete_tracking = nutella.persist.get_json_object_store('discrete_tracking')
 
 # Create new resource
 nutella.net.subscribe('location/resource/add', lambda do |message, from|
-										puts message
 										rid = message['rid']
 										type = message['type']
 										model = message['model']
@@ -175,7 +174,6 @@ nutella.net.subscribe('location/resource/add', lambda do |message, from|
 
 # Remove resource
 nutella.net.subscribe('location/resource/remove', lambda do |message, from|
-										puts message
 										rid = message['rid']
 										if rid != nil
 
@@ -190,7 +188,6 @@ nutella.net.subscribe('location/resource/remove', lambda do |message, from|
 
 # Create new group
 nutella.net.subscribe('location/group/add', lambda do |message, from|
-										puts message
 										group = message['group']
 										if group != nil
 
@@ -205,7 +202,6 @@ nutella.net.subscribe('location/group/add', lambda do |message, from|
 
 # Remove group
 nutella.net.subscribe('location/group/remove', lambda do |message, from|
-										puts message
 										group = message['group']
 										if rid != nil
                       g=$groups[group]
@@ -219,7 +215,6 @@ nutella.net.subscribe('location/group/remove', lambda do |message, from|
 
 # Add resource to group
 nutella.net.subscribe('location/group/resource/add', lambda do |message, from|
-										puts message
 										rid = message['rid']
 										group = message['group']
 										if rid != nil && group != nil
@@ -228,7 +223,6 @@ nutella.net.subscribe('location/group/resource/add', lambda do |message, from|
 
 											if resource != nil
 												puts 'The resource exixts'
-                        puts group
                         # The group exists and the resource is not yet present
                         if $groups[group] != nil && !default['resources'].include?(rid)
                           $groups[group]['resources'].push(rid)
@@ -248,8 +242,8 @@ nutella.net.subscribe('location/resource/update', lambda do |message, from|
     updateResource(message)
 
     $cache.publish_update
-    $cache.publish_enter
     $cache.publish_exit
+    $cache.publish_enter
   end)
 
 # Update the location of the resources
@@ -262,8 +256,8 @@ nutella.net.subscribe('location/resources/update', lambda do |message, from|
     end
 
     $cache.publish_update
-    $cache.publish_enter
     $cache.publish_exit
+    $cache.publish_enter
   end)
 
 def updateResource(updatedResource)
@@ -307,12 +301,10 @@ def updateResource(updatedResource)
         if resource['proximity'] != nil && resource['proximity']['rid'] && resource['proximity']['distance']
           oldBaseStationRid = resource['proximity']['rid']
           if resource['proximity']['rid'] != proximity['rid']
-            #if proximity['distance'] < resource['proximity']['distance']
-              resource['proximity'] = proximity
-              resource['proximity']['timestamp'] = Time.now.to_f
-              publishResourceExit(resource, baseStation['rid'])
-              publishResourceEnter(resource, resource['proximity']['rid'])
-            #end
+            resource['proximity'] = proximity
+            resource['proximity']['timestamp'] = Time.now.to_f
+            publishResourceExit(resource, oldBaseStationRid)
+            publishResourceEnter(resource, resource['proximity']['rid'])
           else
             resource['proximity'] = proximity
             resource['proximity']['timestamp'] = Time.now.to_f
@@ -386,10 +378,8 @@ def updateResource(updatedResource)
   end
 
   if parameters != nil
-    puts parameters
     ps = resource['parameters']
     for parameter in parameters
-      puts parameter
       if parameter['delete'] != nil
         ps.delete(parameter['key'])
       else
@@ -462,7 +452,6 @@ nutella.net.handle_requests('location/resources', lambda do |request, from|
 		rs = []
 		reply = []
     for resource in $groups[group]['resources']
-      puts resource
       rs.push(resource)
     end
 
@@ -494,7 +483,6 @@ end)
 
 # Update the room size
 nutella.net.subscribe('location/room/update', lambda do |message, from|
-												puts message
 												x = message['x']
 												y = message['y']
 												z = message['z']
@@ -533,7 +521,6 @@ def computeResourceUpdate(rid)
         baseStation = nil
         baseStation = $resources[resource['proximity']['rid']]
 
-        puts baseStation
         if baseStation != nil && baseStation['continuous'] != nil
           puts 'Copy continuous position base station'
           resource['proximity']['continuous'] = baseStation['continuous']
@@ -638,35 +625,29 @@ end)
 
 # Publish an added resource
 def publishResourceAdd(resource)
-	puts resource
   $cache.resources_add([resource])
 	#nutella.net.publish('location/resources/added', {:resources => [resource]})
 end
 
 # Publish a removed resource
 def publishResourceRemove(resource)
-	puts resource
   $cache.resources_remove([resource])
 	#nutella.net.publish('location/resources/removed', {:resources => [resource]})
 end
 
 # Publish an updated resource
 def publishResourceUpdate(resource)
-	puts resource
   $cache.resources_update([resource])
 	#nutella.net.publish('location/resources/updated', {:resources => [resource]})
 end
 
 # Publish an updated room
 def publishRoomUpdate(room)
-	puts room
 	nutella.net.publish('location/room/updated', room)
 end
 
 # Publish resources enter base station proximity area
 def publishResourcesEnter(resources, baseStationRid)
-  puts resources
-  puts baseStationRid
   #message = {:resources => resources}
   #nutella.net.publish("location/resource/static/#{baseStationRid}/enter", message)
   $cache.resources_enter(resources, baseStationRid)
@@ -674,8 +655,6 @@ end
 
 # Publish resources exit base station proximity area
 def publishResourcesExit(resources, baseStationRid)
-  puts resources
-  puts baseStationRid
   #message = {:resources => resources}
   #nutella.net.publish("location/resource/static/#{baseStationRid}/exit", message)
   $cache.resources_exit(resources, baseStationRid)
@@ -833,8 +812,8 @@ Thread.new do
     end
 
     $cache.publish_update
-    $cache.publish_enter
     $cache.publish_exit
+    $cache.publish_enter
 
     sleep 2
   end
